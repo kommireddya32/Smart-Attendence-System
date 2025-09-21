@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faculty Login - Smart Attendance System</title>
+    <link rel="stylesheet" href="css/style-login.css"> 
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <main class="container">
+        <section class="login-card">
+            <div class="card-header">
+                <div class="icon-container">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="#ffffff">
+                        <path d="M12 0c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm7.753 18.305c-.261-.586-1.356-1.157-2.004-1.442-1.393-.625-2.85-1.103-2.85-2.239v-1.126c.712-.519 1.104-1.631 1.104-2.584 0-1.865-1.929-3.359-4.004-3.359s-4.004 1.494-4.004 3.359c0 .953.392 2.065 1.104 2.584v1.126c0 1.136-1.457 1.614-2.85 2.239-.648.285-1.743.856-2.004 1.442-.349.782.682 1.695 1.737 1.695h9.903c1.055 0 2.086-.913 1.737-1.695z"/>
+                    </svg>
+                </div>
+                <h1>Faculty Login</h1>
+            </div>
+
+            <form action="/faculty/login" method="POST">
+                <div class="input-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" placeholder="Enter your email" required>
+                </div>
+
+                <div class="input-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" placeholder="Enter your password" required>
+                </div>
+                
+                <div class="form-footer">
+                    <a href="/forgot-password" class="forgot-password">Forgot Password?</a>
+                </div>
+
+                <button type="submit" class="btn btn-login">Login</button>
+            </form>
+
+            <div class="separator">
+                <span>OR</span>
+            </div>
+
+            <p class="register-link">Need an account? <a href="/contact-admin">Contact Administrator</a></p>
+
+        </section>
+    </main>
+</body>
+</html>

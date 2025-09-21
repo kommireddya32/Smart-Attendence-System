@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard</title>
+    <link rel="stylesheet" href="/css/student-style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+</head>
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Student Portal</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="/student/dashboard" class="active">Dashboard</a>
+                <a href="/student/student-profile">My Profile</a>
+                <a href="/student/logout">Logout</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="main-header">
+                <h1>Student Dashboard</h1>
+            </header>
+            
+            <section class="scanner-section">
+                <button id="start-scan-btn" class="btn btn-primary">Scan Attendance QR Code</button>
+                <div id="scan-result"></div>
+                <div id="qr-reader" style="display: none;"></div>
+                <button id="stop-scan-btn" class="btn btn-secondary" style="display: none;">Stop Scanning</button>
+            </section>
+
+            <section class="content-table" style="margin-top: 30px;">
+                <h2>My Attendance History</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Faculty Name</th>
+                            <th>Department</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-table-body">
+                        </tbody>
+                </table>
+            </section>
+        </main>
+    </div>
+
+<script>
+    // --- ELEMENT SELECTORS ---
+    const startScanBtn = document.getElementById('start-scan-btn');
+    const stopScanBtn = document.getElementById('stop-scan-btn');
+    const qrReaderDiv = document.getElementById('qr-reader');
+    const scanResultDiv = document.getElementById('scan-result');
+    const historyTableBody = document.getElementById('history-table-body');
+    const html5QrCode = new Html5Qrcode("qr-reader");
+
+    // --- EVENT LISTENERS ---
+
+    // This runs as soon as the page is fully loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        loadAttendanceHistory();
+    });
+
+    startScanBtn.addEventListener('click', () => {
+        scanResultDiv.innerHTML = '';
+        qrReaderDiv.style.display = 'block';
+        stopScanBtn.style.display = 'inline-block';
+        startScanBtn.style.display = 'none';
+        html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, sendAttendanceData);
+    });
+
+    stopScanBtn.addEventListener('click', () => {
+        stopScanner();
+    });
+    
+    // --- FUNCTIONS ---
+
+    function stopScanner() {
+        html5QrCode.stop().then(ignore => {
+            qrReaderDiv.style.display = 'none';
+            stopScanBtn.style.display = 'none';
+            startScanBtn.style.display = 'block';
+            scanResultDiv.innerHTML = '';
+        }).catch(err => console.error("Failed to stop the scanner.", err));
+    }
+    
+    function sendAttendanceData(qrData) {
+        const apiUrl = `/student/mark-attendance`;
+        html5QrCode.pause();
+        scanResultDiv.innerHTML = `<p>Processing...</p>`;
+
+        fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ qrData: qrData })
+        })
+        .then(response => {
+            if (!response.ok) throw new Error(`Server Error: ${response.status}`);
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                stopScanner();
+                scanResultDiv.innerHTML = `<p class="success">${data.message}</p>`;
+                // Refresh the history table to show the new entry immediately
+                loadAttendanceHistory(); 
+            } else {
+                scanResultDiv.innerHTML = `<p class="error">${data.message}</p>`;
+                html5QrCode.resume();
+            }
+        })
+        .catch(err => {
+            console.error("Error sending attendance data:", err);
+            scanResultDiv.innerHTML = `<p class="error">${err.message}</p>`;
+            html5QrCode.resume();
+        });
+    }
+
+    // Inside the <script> tag in student-dashboard.html
+
+function loadAttendanceHistory() {
+    const apiUrl = `/student/history`;
+
+    fetch(apiUrl)
+        .then(response => {
+            if (!response.ok) throw new Error("Failed to load attendance history.");
+            return response.json();
+        })
+        .then(data => {
+            const historyTableBody = document.getElementById('history-table-body');
+            historyTableBody.innerHTML = ''; 
+
+            if (data.length === 0) {
+                // Update colspan to 4
+                historyTableBody.innerHTML = `<tr><td colspan="4" style="text-align: center;">No attendance history found.</td></tr>`;
+                return;
+            }
+
+            data.forEach(record => {
+                const row = document.createElement('tr');
+                const date = new Date(record.attendanceDate);
+                const formattedDate = date.getFullYear() + '-' + 
+                                  String(date.getMonth() + 1).padStart(2, '0') + '-' + 
+                                  String(date.getDate()).padStart(2, '0') + ' ' +
+                                  String(date.getHours()).padStart(2, '0') + ':' + 
+                                  String(date.getMinutes()).padStart(2, '0');
+
+                // Add the new cell for record.faculty.name
+                row.innerHTML = `
+                    <td>${formattedDate}</td>
+                    <td>${record.faculty.name}</td>
+                    <td>${record.faculty.department}</td>
+                    <td>${record.status}</td>
+                `;
+                historyTableBody.appendChild(row);
+            });
+        })
+        .catch(err => {
+            // ... (error handling)
+        });
+}
+</script>
+</body>
+</html>
