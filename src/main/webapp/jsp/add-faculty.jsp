@@ -15,7 +15,7 @@
 </head>
 <body>
 	<div class="dashboard-container">
-		<jsp:include page="../sidebar.jsp">
+		<jsp:include page="sidebar.jsp">
 			<jsp:param name="activePage" value="faculty" />
 		</jsp:include>
 

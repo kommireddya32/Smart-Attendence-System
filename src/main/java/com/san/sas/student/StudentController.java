@@ -18,13 +18,11 @@ public class StudentController {
 
     @Autowired
     private StudentService studentService;
-    
-    @Autowired 
+
+    @Autowired
     private AttendanceService attendanceService;
 
-    /**
-     * Handles the student login form submission.
-     */
+    /** Handles the student login form submission. */
     @PostMapping("/login-process")
     public String processLogin(@RequestParam String email,
                                @RequestParam String password,
@@ -38,13 +36,11 @@ public class StudentController {
             return "redirect:/student/dashboard";
         } else {
             redirectAttributes.addFlashAttribute("error", "Invalid ID/email or password");
-            return "redirect:/StudentLogin";
+            return "redirect:/StudentLogin"; // public login page
         }
     }
 
-    /**
-     * Displays the dashboard and loads the student's attendance history.
-     */
+    /** Displays the dashboard and loads the student's attendance history. */
     @GetMapping("/dashboard")
     public String showDashboard(Model model, HttpSession session) {
         Long studentId = (Long) session.getAttribute("studentId");
@@ -52,19 +48,14 @@ public class StudentController {
             return "redirect:/StudentLogin";
         }
 
-        // Fetch the attendance history for the logged-in student
         List<AttendanceRecord> history = attendanceService.getHistoryForStudent(studentId);
-        
-        // Add the history to the model for the JSP to display
         model.addAttribute("attendanceHistory", history);
-        
-        return "student-dashboard.html";
+
+        // points to /WEB-INF/views/student/dashboard.jsp
+        return "student/dashboard";
     }
 
-    /**
-     * Handles the QR code scan data from the student's dashboard.
-     * This version is updated to return a Map for safer JSON conversion.
-     */
+    /** Handles the QR code scan data from the student's dashboard. */
     @PostMapping("/mark-attendance")
     @ResponseBody
     public Map<String, Object> markAttendance(@RequestBody QrDataRequest request, HttpSession session) {
@@ -72,7 +63,7 @@ public class StudentController {
         if (studentId == null) {
             return Map.of("success", false, "message", "Not logged in.");
         }
-        
+
         String resultMessage = attendanceService.markAttendance(studentId, request.getQrData());
 
         if (resultMessage.contains("Successfully")) {
@@ -81,56 +72,66 @@ public class StudentController {
             return Map.of("success", false, "message", resultMessage);
         }
     }
-    
-    // Simple class to accept the JSON from the frontend
+
+    /** Simple class to accept the JSON from the frontend. */
     static class QrDataRequest {
         private String qrData;
         public String getQrData() { return qrData; }
         public void setQrData(String qrData) { this.qrData = qrData; }
     }
+
     @GetMapping("/logout")
     public String logout(HttpSession session) {
         session.invalidate();
         return "redirect:/StudentLogin";
     }
- // Add these imports to your StudentController
-    @RequestMapping("student-profile")
-    public String studentprofile(){
-    	return "student-profile.html";
+
+    /** Show profile page. */
+    @GetMapping("/profile")
+    public String studentProfile() {
+        // points to /WEB-INF/views/student/profile.jsp
+        return "student/profile";
     }
-    // Add this method inside your StudentController class
+
+    /** Return attendance history as JSON. */
     @GetMapping("/history")
-    @ResponseBody // This is crucial - it tells Spring to return JSON
+    @ResponseBody
     public List<AttendanceRecord> getAttendanceHistory(HttpSession session) {
         Long studentId = (Long) session.getAttribute("studentId");
         if (studentId == null) {
-            // Return an empty list if not logged in
-            return List.of(); 
+            return List.of();
         }
-        // This calls the service method we already created
         return attendanceService.getHistoryForStudent(studentId);
     }
+
+    /** Fetch profile data as JSON. */
     @GetMapping("/profile/data")
     @ResponseBody
     public Student getProfileData(HttpSession session) {
         Long studentId = (Long) session.getAttribute("studentId");
         if (studentId == null) {
-            return null; // Or handle error appropriately
+            return null;
         }
         return studentService.getStudentById(studentId);
     }
 
-    // 2. POST endpoint to handle the profile update
+    /** Update profile data. */
     @PostMapping("/profile/update")
     @ResponseBody
-    public Map<String, Object> updateProfile(@RequestBody ProfileUpdateRequest request, HttpSession session) {
+    public Map<String, Object> updateProfile(@RequestBody ProfileUpdateRequest request,
+                                             HttpSession session) {
         Long studentId = (Long) session.getAttribute("studentId");
         if (studentId == null) {
             return Map.of("success", false, "message", "Not logged in.");
         }
 
         try {
-            boolean success = studentService.updateProfile(studentId, request.getName(), request.getCurrentPassword(), request.getNewPassword());
+            boolean success = studentService.updateProfile(
+                    studentId,
+                    request.getName(),
+                    request.getCurrentPassword(),
+                    request.getNewPassword()
+            );
             if (success) {
                 return Map.of("success", true, "message", "Profile updated successfully!");
             }
@@ -139,11 +140,12 @@ public class StudentController {
         }
         return Map.of("success", false, "message", "An unknown error occurred.");
     }
+
     static class ProfileUpdateRequest {
         private String name;
         private String currentPassword;
         private String newPassword;
-        // Add getters and setters for all fields
+
         public String getName() { return name; }
         public void setName(String name) { this.name = name; }
         public String getCurrentPassword() { return currentPassword; }

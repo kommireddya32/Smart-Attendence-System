@@ -5,7 +5,6 @@ import com.san.sas.attendance.AttendanceRecord;
 import com.san.sas.attendance.AttendanceService;
 import com.san.sas.dto.StudentAttendanceStatusDto;
 import com.san.sas.util.QRCodeGenerator;
-
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -27,50 +26,49 @@ import java.util.List;
 @RequestMapping("/faculty")
 public class FacultyController {
 
-    // --- UPDATED: Standardized Dependency Injection ---
     private final FacultyService facultyService;
     private final AttendanceService attendanceService;
 
     @Autowired
-    public FacultyController(FacultyService facultyService, AttendanceService attendanceService) {
+    public FacultyController(FacultyService facultyService,
+                             AttendanceService attendanceService) {
         this.facultyService = facultyService;
         this.attendanceService = attendanceService;
     }
 
-    // --- Login and Dashboard ---
+    /* ---------- LOGIN / DASHBOARD ---------- */
 
     @PostMapping("/login")
-    public String processLogin(@RequestParam String email, 
-                               @RequestParam String password, 
+    public String processLogin(@RequestParam String email,
+                               @RequestParam String password,
                                HttpSession session,
                                RedirectAttributes redirectAttributes) {
 
-        Faculty authenticatedFaculty = facultyService.authenticate(email, password);
+        Faculty authenticated = facultyService.authenticate(email, password);
 
-        if (authenticatedFaculty != null) {
-            session.setAttribute("facultyId", authenticatedFaculty.getId());
+        if (authenticated != null) {
+            session.setAttribute("facultyId", authenticated.getId());
             return "redirect:/faculty/dashboard";
         } else {
             redirectAttributes.addFlashAttribute("error", "Invalid email or password");
+            // HTML page in resources/static
             return "redirect:/FacultyLogin";
         }
     }
 
-    // --- UPDATED: Now loads history data for the dashboard ---
     @GetMapping("/dashboard")
     public String showDashboard(Model model, HttpSession session) {
         Long facultyId = (Long) session.getAttribute("facultyId");
         if (facultyId == null) {
             return "redirect:/FacultyLogin";
         }
-        
-        // Fetch the session history for the logged-in faculty
-        List<AttendanceRecord> previousSessions = attendanceService.getHistoryForFaculty(facultyId);
-        
-        // Add the history to the model for the JSP to use
+
+        List<AttendanceRecord> previousSessions =
+                attendanceService.getHistoryForFaculty(facultyId);
         model.addAttribute("previousSessions", previousSessions);
 
-        return "faculty-dashboard.jsp";
+        // JSP page inside src/main/webapp/jsp
+        return "jsp/faculty-dashboard.jsp";
     }
 
     @GetMapping("/logout")
@@ -79,7 +77,7 @@ public class FacultyController {
         return "redirect:/FacultyLogin";
     }
 
-    // --- Profile Management ---
+    /* ---------- PROFILE ---------- */
 
     @GetMapping("/profile")
     public String showProfilePage(Model model, HttpSession session) {
@@ -87,11 +85,11 @@ public class FacultyController {
         if (facultyId == null) {
             return "redirect:/FacultyLogin";
         }
-        
+
         Faculty faculty = facultyService.getFacultyById(facultyId);
         model.addAttribute("faculty", faculty);
-        
-        return "faculty-profile.jsp";
+
+        return "jsp/faculty-profile.jsp";
     }
 
     @PostMapping("/profile/update")
@@ -101,42 +99,46 @@ public class FacultyController {
                                 @RequestParam String newPassword,
                                 HttpSession session,
                                 RedirectAttributes redirectAttributes) {
-                                    
+
         Long facultyId = (Long) session.getAttribute("facultyId");
         if (facultyId == null) {
             return "redirect:/FacultyLogin";
         }
 
         try {
-            boolean success = facultyService.updateProfile(facultyId, name, department, currentPassword, newPassword);
-            if (success) {
-                redirectAttributes.addFlashAttribute("success", true);
-                redirectAttributes.addFlashAttribute("message", "Profile updated successfully!");
-            }
+            boolean success = facultyService
+                    .updateProfile(facultyId, name, department, currentPassword, newPassword);
+            redirectAttributes.addFlashAttribute("success", success);
+            redirectAttributes.addFlashAttribute("message",
+                    success ? "Profile updated successfully!" : "Update failed");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("success", false);
             redirectAttributes.addFlashAttribute("message", e.getMessage());
         }
-        
+
         return "redirect:/faculty/profile";
     }
 
-
-
-    // --- QR Code API ---
+    /* ---------- QR CODE API ---------- */
 
     @GetMapping(value = "/api/qrcode/generate", produces = MediaType.IMAGE_PNG_VALUE)
     @ResponseBody
-    public byte[] generateQrCode(@RequestParam String department, HttpSession session) throws WriterException, IOException {
-        
+    public byte[] generateQrCode(@RequestParam String department,
+                                 HttpSession session)
+            throws WriterException, IOException {
+
         Long facultyId = (Long) session.getAttribute("facultyId");
         if (facultyId == null) {
             return null;
         }
 
-        String qrDataString = facultyService.generateAndSaveQrData(facultyId, department);
-        return QRCodeGenerator.generateQRCodeImage(qrDataString, 250, 250);
+        String qrData = facultyService.generateAndSaveQrData(facultyId, department);
+        return QRCodeGenerator.generateQRCodeImage(qrData, 250, 250);
     }
+
+    /* ---------- ATTENDANCE HISTORY ---------- */
+
+    // Page is a static HTML in resources/static
     @GetMapping("/history-page")
     public String showHistoryPage(HttpSession session) {
         if (session.getAttribute("facultyId") == null) {
@@ -145,17 +147,17 @@ public class FacultyController {
         return "faculty-history.html";
     }
 
-    // This API endpoint returns the attendance data as JSON
+    // Returns JSON
     @GetMapping("/history")
     @ResponseBody
     public List<StudentAttendanceStatusDto> getAttendanceHistory(
             @RequestParam String department,
-            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date, // <-- THIS IS THE FIX
+            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date,
             HttpSession session) {
-        
+
         Long facultyId = (Long) session.getAttribute("facultyId");
         if (facultyId == null) {
-            return List.of(); 
+            return List.of();
         }
         return attendanceService.getAttendanceStatusForClass(facultyId, department, date);
     }
