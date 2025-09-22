@@ -27,6 +27,7 @@ import java.util.List;
 @RequestMapping("/faculty")
 public class FacultyController {
 
+    // --- UPDATED: Standardized Dependency Injection ---
     private final FacultyService facultyService;
     private final AttendanceService attendanceService;
 
@@ -36,40 +37,46 @@ public class FacultyController {
         this.attendanceService = attendanceService;
     }
 
-    // --- Login, Dashboard & Logout ---
+    // --- Login and Dashboard ---
 
     @PostMapping("/login")
     public String processLogin(@RequestParam String email, 
                                @RequestParam String password, 
                                HttpSession session,
                                RedirectAttributes redirectAttributes) {
+
         Faculty authenticatedFaculty = facultyService.authenticate(email, password);
+
         if (authenticatedFaculty != null) {
             session.setAttribute("facultyId", authenticatedFaculty.getId());
             return "redirect:/faculty/dashboard";
         } else {
             redirectAttributes.addFlashAttribute("error", "Invalid email or password");
-            return "redirect:/FacultyLogin.html";
+            return "redirect:/FacultyLogin";
         }
     }
 
+    // --- UPDATED: Now loads history data for the dashboard ---
     @GetMapping("/dashboard")
     public String showDashboard(Model model, HttpSession session) {
         Long facultyId = (Long) session.getAttribute("facultyId");
         if (facultyId == null) {
-            return "redirect:/FacultyLogin.html";
+            return "redirect:/FacultyLogin";
         }
         
+        // Fetch the session history for the logged-in faculty
         List<AttendanceRecord> previousSessions = attendanceService.getHistoryForFaculty(facultyId);
+        
+        // Add the history to the model for the JSP to use
         model.addAttribute("previousSessions", previousSessions);
 
-        return "faculty-dashboard"; // Renders faculty-dashboard.jsp
+        return "faculty-dashboard.jsp";
     }
 
     @GetMapping("/logout")
     public String logout(HttpSession session) {
         session.invalidate();
-        return "redirect:/FacultyLogin.html";
+        return "redirect:/FacultyLogin";
     }
 
     // --- Profile Management ---
@@ -78,13 +85,13 @@ public class FacultyController {
     public String showProfilePage(Model model, HttpSession session) {
         Long facultyId = (Long) session.getAttribute("facultyId");
         if (facultyId == null) {
-            return "redirect:/FacultyLogin.html";
+            return "redirect:/FacultyLogin";
         }
         
         Faculty faculty = facultyService.getFacultyById(facultyId);
         model.addAttribute("faculty", faculty);
         
-        return "faculty-profile"; // Renders faculty-profile.jsp
+        return "faculty-profile.jsp";
     }
 
     @PostMapping("/profile/update")
@@ -97,7 +104,7 @@ public class FacultyController {
                                     
         Long facultyId = (Long) session.getAttribute("facultyId");
         if (facultyId == null) {
-            return "redirect:/FacultyLogin.html";
+            return "redirect:/FacultyLogin";
         }
 
         try {
@@ -114,28 +121,7 @@ public class FacultyController {
         return "redirect:/faculty/profile";
     }
 
-    // --- Attendance History Page & API ---
 
-    @GetMapping("/history-page")
-    public String showHistoryPage(HttpSession session) {
-        if (session.getAttribute("facultyId") == null) {
-            return "redirect:/FacultyLogin.html";
-        }
-        return "faculty-history"; // Renders faculty-history.jsp
-    }
-
-    @GetMapping("/history")
-    @ResponseBody
-    public List<StudentAttendanceStatusDto> getAttendanceHistory(
-            @RequestParam String department,
-            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date,
-            HttpSession session) {
-        Long facultyId = (Long) session.getAttribute("facultyId");
-        if (facultyId == null) {
-            return List.of();
-        }
-        return attendanceService.getAttendanceStatusForClass(facultyId, department, date);
-    }
 
     // --- QR Code API ---
 
@@ -150,5 +136,27 @@ public class FacultyController {
 
         String qrDataString = facultyService.generateAndSaveQrData(facultyId, department);
         return QRCodeGenerator.generateQRCodeImage(qrDataString, 250, 250);
+    }
+    @GetMapping("/history-page")
+    public String showHistoryPage(HttpSession session) {
+        if (session.getAttribute("facultyId") == null) {
+            return "redirect:/FacultyLogin";
+        }
+        return "faculty-history.html";
+    }
+
+    // This API endpoint returns the attendance data as JSON
+    @GetMapping("/history")
+    @ResponseBody
+    public List<StudentAttendanceStatusDto> getAttendanceHistory(
+            @RequestParam String department,
+            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date, // <-- THIS IS THE FIX
+            HttpSession session) {
+        
+        Long facultyId = (Long) session.getAttribute("facultyId");
+        if (facultyId == null) {
+            return List.of(); 
+        }
+        return attendanceService.getAttendanceStatusForClass(facultyId, department, date);
     }
 }
