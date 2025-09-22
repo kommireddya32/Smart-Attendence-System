@@ -41,9 +41,9 @@ public class FrontController {
         return "index.html";
     }
     
-    @RequestMapping("/admin") // Changed to GetMapping for clarity
+    @GetMapping("/admin") // Changed to GetMapping for clarity
     public String adminLoginPage() {
-        return "admin_login.jsp";
+        return "admin_login";
     }
 
     @RequestMapping("/FacultyLogin")
