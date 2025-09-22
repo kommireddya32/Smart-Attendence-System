@@ -43,7 +43,7 @@ public class FrontController {
     
     @GetMapping("/admin") // Changed to GetMapping for clarity
     public String adminLoginPage() {
-        return "admin_login";
+        return "admin_login.jsp";
     }
 
     @RequestMapping("/FacultyLogin")
