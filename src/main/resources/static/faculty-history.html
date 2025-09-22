@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Attendance History</title>
+<link rel="stylesheet" href="/css/faculty-style.css">
+<link
+	href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap"
+	rel="stylesheet">
+</head>
+<body>
+	<div class="dashboard-container">
+		<aside class="sidebar">
+			<div class="sidebar-header">
+				<h2>Faculty Portal</h2>
+			</div>
+			<nav class="sidebar-nav">
+				<a href="/faculty/dashboard">Dashboard</a> <a
+					href="/faculty-history.html" class="active">Attendance History</a>
+
+				<a href="/faculty/profile">My Profile</a> <a href="/faculty/logout">Logout</a>
+			</nav>
+		</aside>
+		<main class="main-content">
+			<header class="main-header">
+				<h1>Attendance History</h1>
+			</header>
+			<section class="content-form">
+				<form id="history-form">
+					<div class="form-group">
+						<label for="department">Select Department</label> <select
+							id="department" name="department" required>
+							<option value="" disabled selected>Select...</option>
+							<option value="CSE">CSE</option>
+							<option value="AIML">AIML</option>
+							<option value="CSD">CSD</option>
+							<option value="CSC">CSC</option>
+							<option value="ECE">ECE</option>
+							<option value="MECH">MECH</option>
+							<option value="IT">IT</option>
+							<option value="EEE">EEE</option>
+						</select>
+					</div>
+					<div class="form-group">
+						<label for="date">Select Date</label> <input type="date" id="date"
+							name="date" required>
+					</div>
+					<div class="form-actions">
+						<button type="submit" class="btn btn-primary">View
+							History</button>
+					</div>
+				</form>
+			</section>
+			<section class="content-table" style="margin-top: 30px;">
+				<h2>Results</h2>
+				<table>
+					<thead>
+						<tr>
+							<th>Student ID</th>
+							<th>Student Name</th>
+							<th>Status</th>
+						</tr>
+					</thead>
+					<tbody id="history-results-body">
+						<tr>
+							<td colspan="3" style="text-align: center;">Please select a
+								department and date.</td>
+						</tr>
+					</tbody>
+				</table>
+			</section>
+		</main>
+	</div>
+
+	<script>
+    document.getElementById('history-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const department = document.getElementById('department').value;
+        const date = document.getElementById('date').value;
+        const resultsBody = document.getElementById('history-results-body');
+
+        if (!department || !date) {
+            alert("Please select both a department and a date.");
+            return;
+        }
+
+        resultsBody.innerHTML = `<tr><td colspan="3" style="text-align: center;">Loading...</td></tr>`;
+
+        const apiUrl = `/faculty/history?department=${department}&date=${date}`;
+
+        fetch(apiUrl)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Server returned an error: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                resultsBody.innerHTML = '';
+                if (data.length === 0) {
+                    resultsBody.innerHTML = `<tr><td colspan="3" style="text-align: center;">No attendance records found.</td></tr>`;
+                    return;
+                }
+                data.forEach(item => {
+                    const row = document.createElement('tr');
+                    const statusClass = item.status === 'Present' ? 'status-present' : 'status-absent';
+                    row.innerHTML = `
+                        <td>${item.studentId}</td>
+                        <td>${item.studentName}</td>
+                        <td class="${statusClass}">${item.status}</td>
+                    `;
+                    resultsBody.appendChild(row);
+                });
+            })
+            .catch(err => {
+                console.error("Failed to fetch history:", err);
+                resultsBody.innerHTML = `<tr><td colspan="3" style="text-align: center;">An error occurred while fetching data.</td></tr>`;
+            });
+    });
+</script>
+</body>
+</html>
