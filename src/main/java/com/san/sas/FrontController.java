@@ -38,7 +38,7 @@ public class FrontController {
 
     @RequestMapping("/")
     public String index() {
-        return "index.html";
+        return "index";
     }
     
     @GetMapping("/admin") // Changed to GetMapping for clarity
